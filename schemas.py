@@ -9,5 +9,18 @@ class UsuarioSchema(BaseModel):
     admin: Optional[bool]
 
     class Config:
-        from_attributes = True
+        from_attributes = True #se não passar, vem como dicionário
 
+class PedidoSchema(BaseModel):
+    id_usuario: int
+
+    class Config:
+        from_attributes = True #se não passar, vem como dicionário
+
+class LoginSchema(BaseModel):
+
+    email: str
+    senha: str
+
+    class Config:
+        from_atributes = True #se não passar, vem como dicionário

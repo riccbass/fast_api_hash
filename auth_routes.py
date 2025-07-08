@@ -1,12 +1,18 @@
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
+
 from models import Usuario
 from dependencies import pegar_sessao
-from schemas import UsuarioSchema
+from schemas import UsuarioSchema, LoginSchema
 from sqlalchemy.orm import Session
 
 from main import bcrypt_context
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
+
+def criar_token(id_usario):
+    token = f'adfq23asfasf{id_usario}'
+    return token
 
 @auth_router.get("/")
 async def home():
@@ -16,7 +22,10 @@ async def home():
     return {"mensagem": "Você acessou a rota padrão de atenticação", "autenticado": False}
 
 @auth_router.post("/criar_conta")
-async def criar_conta(usuario_schema: UsuarioSchema, session: Session = Depends(pegar_sessao)):
+async def criar_conta(usuario_schema: UsuarioSchema, session: Session = Depends(pegar_sessao)) -> dict[str, str]:
+    """
+    Rota para criar conta
+    """
 
     usuario = session.query(Usuario).filter(Usuario.email == usuario_schema.email).first() # type: ignore
 
@@ -36,4 +45,12 @@ async def criar_conta(usuario_schema: UsuarioSchema, session: Session = Depends(
 
         return {"mensagem":f"usuário cadastrado com sucesso {novo_usuario.email}"}
 
+@auth_router.post("/login")
+async def login(login_schema: LoginSchema, session: Session = Depends(pegar_sessao)) -> dict[str, str]:
+    usuario = session.query(Usuario).filter(Usuario.email == login_schema.email).first() # type: ignore
 
+    if not usuario:
+        raise HTTPException(status_code=400, detail="Usuário não encontrado")
+    else:
+        access_token = criar_token(usuario.id)
+        return {"access_token": access_token, "token_type": "Bearer"}
