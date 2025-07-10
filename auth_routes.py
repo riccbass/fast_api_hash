@@ -14,6 +14,18 @@ def criar_token(id_usario):
     token = f'adfq23asfasf{id_usario}'
     return token
 
+def autenticar_usuario(email, senha, session):
+
+    usuario = session.query(Usuario).filter(Usuario.email == email).first() # type: ignore
+
+    if not usuario:
+        return False
+    elif not bcrypt_context.verify(senha, usuario.senha):
+        return False
+
+    return usuario
+
+
 @auth_router.get("/")
 async def home():
     """
@@ -47,10 +59,10 @@ async def criar_conta(usuario_schema: UsuarioSchema, session: Session = Depends(
 
 @auth_router.post("/login")
 async def login(login_schema: LoginSchema, session: Session = Depends(pegar_sessao)) -> dict[str, str]:
-    usuario = session.query(Usuario).filter(Usuario.email == login_schema.email).first() # type: ignore
+    usuario = autenticar_usuario(login_schema.email, login_schema.senha, session)
 
     if not usuario:
-        raise HTTPException(status_code=400, detail="Usuário não encontrado")
+        raise HTTPException(status_code=400, detail="Usuário não encontrado ou credenciais inválidas")
     else:
         access_token = criar_token(usuario.id)
         return {"access_token": access_token, "token_type": "Bearer"}
