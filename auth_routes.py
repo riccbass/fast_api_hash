@@ -5,14 +5,26 @@ from models import Usuario
 from dependencies import pegar_sessao
 from schemas import UsuarioSchema, LoginSchema
 from sqlalchemy.orm import Session
+from jose import jwt, JWTError
+from datetime import datetime, timedelta, timezone
 
-from main import bcrypt_context
+
+from main import bcrypt_context, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY
+
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 
 def criar_token(id_usario):
-    token = f'adfq23asfasf{id_usario}'
-    return token
+
+    expire_minutes = int(ACCESS_TOKEN_EXPIRE_MINUTES) if ACCESS_TOKEN_EXPIRE_MINUTES is not None else 30
+    data_expiracao = datetime.now(timezone.utc) + timedelta(minutes=expire_minutes)
+
+    #normalmente se chama o id de sub
+    dic_info = {"sub":id_usario, "exp":data_expiracao}
+
+    jwt_codificado = jwt.encode(dic_info, SECRET_KEY or "batata", ALGORITHM or "HS256")
+
+    return jwt_codificado
 
 def autenticar_usuario(email, senha, session):
 
