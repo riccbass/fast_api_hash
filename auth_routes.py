@@ -11,13 +11,11 @@ from datetime import datetime, timedelta, timezone
 
 from main import bcrypt_context, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, SECRET_KEY
 
-
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
 
-def criar_token(id_usario):
+def criar_token(id_usario, duracao_token=timedelta(minutes=int(ACCESS_TOKEN_EXPIRE_MINUTES))): # type: ignore
 
-    expire_minutes = int(ACCESS_TOKEN_EXPIRE_MINUTES) if ACCESS_TOKEN_EXPIRE_MINUTES is not None else 30
-    data_expiracao = datetime.now(timezone.utc) + timedelta(minutes=expire_minutes)
+    data_expiracao = datetime.now(timezone.utc) + duracao_token
 
     #normalmente se chama o id de sub
     dic_info = {"sub":id_usario, "exp":data_expiracao}
@@ -25,6 +23,15 @@ def criar_token(id_usario):
     jwt_codificado = jwt.encode(dic_info, SECRET_KEY or "batata", ALGORITHM or "HS256")
 
     return jwt_codificado
+
+def verificar_token(token, session: Session = Depends(pegar_sessao)):
+
+    #verificar se o token é valido
+    #extrair o ID do usuário do TOKEN
+
+    usuario = session.query(Usuario.id == 7).first()
+
+    return usuario
 
 def autenticar_usuario(email, senha, session):
 
@@ -77,4 +84,24 @@ async def login(login_schema: LoginSchema, session: Session = Depends(pegar_sess
         raise HTTPException(status_code=400, detail="Usuário não encontrado ou credenciais inválidas")
     else:
         access_token = criar_token(usuario.id)
-        return {"access_token": access_token, "token_type": "Bearer"}
+        refresh_token = criar_token(usuario.id, duracao_token=timedelta(days=7))
+        return {
+                "access_token": access_token, 
+                "refresh_token":refresh_token,
+                "token_type": "Bearer"
+                }
+
+@auth_router.get("/refresh")
+async def use_refresh_token(token):
+
+    #verificar o token
+
+    usuario = verificar_token(token)
+    access_token = criar_token(usuario.id)
+
+    return {
+        "access_token": access_token, 
+        "token_type": "Bearer"
+        }
+
+    
