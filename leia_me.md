@@ -19,3 +19,11 @@ alembic revision --autogenerate -m "rmover admin"
 ### executa migração
 
 alembic upgrade head
+
+### cria migração
+
+alembic revision --autogenerate -m "adicionar itens no pedido"
+
+### executa migração
+
+alembic upgrade head
