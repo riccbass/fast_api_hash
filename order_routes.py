@@ -115,3 +115,65 @@ async def remover_item_pedido(id_item_pedido: int,
         "pedido": pedido # type: ignore
 
     }
+
+#finalizar um pedido
+
+@order_router.post("/pedido/finalizar/{id_pedido}")
+async def finalizar_pedido(id_pedido: int, 
+                           session: Session = Depends(pegar_sessao),
+                           usuario: Usuario = Depends(verificar_token)):
+
+    pedido = session.query(Pedido).filter(Pedido.id == id_pedido).first()
+
+    if not pedido:
+        raise HTTPException(status_code=400, detail="Pedido não encontrado")
+    
+    if not usuario.admin or usuario.id != pedido.usuario: # type: ignore
+        raise HTTPException(status_code=401, detail="Voce não tem autorização para fazer essa modificação")        
+
+    pedido.status = "FINALIZADO"
+    session.commit()
+    return {
+        "mensagem": f"Pedido número: {pedido.id} fianlizado com sucesso", #passando o campo, 
+        #obriga o modelo a importar todos os campos
+        "pedido": pedido
+    }
+
+#visualizar 1 pedido
+@order_router.get("/pedido/{id_pedido}")
+async def visualizar_pedido(id_pedido: int, 
+                            session: Session = Depends(pegar_sessao),
+                            usuario: Usuario = Depends(verificar_token)):
+    
+    pedido = session.query(Pedido).filter(Pedido.id == id_pedido).first()
+
+    if not pedido:
+        raise HTTPException(status_code=400, detail="Pedido não encontrado")
+    
+    if not usuario.admin or usuario.id != pedido.usuario: # type: ignore
+        raise HTTPException(status_code=401, detail="Voce não tem autorização para fazer essa modificação")        
+
+    return {
+        "quantidade_itens_pedido": len(pedido.itens),
+        "pedido": pedido
+    }
+
+
+#visualziar todos os de pedidos de 1 usuário
+@order_router.get("/listar/pedidos-usuario")
+async def listar_pedidos_usuario(n_pedidos: int = 10,
+                                 session: Session = Depends(pegar_sessao),
+                                 usuario: Usuario = Depends(verificar_token)):
+
+    pedidos = (
+        session.query(Pedido)
+        .filter(Pedido.usuario == usuario.id)  # type: ignore
+        .order_by(Pedido.id.desc())
+        .limit(n_pedidos)
+        .all()
+    )
+
+    return {
+        "pedidos":pedidos
+    }
+    
